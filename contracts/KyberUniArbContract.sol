@@ -1,82 +1,104 @@
 pragma solidity ^0.5.0;
 
 import "./UniswapExchange.sol";
-import "./GLDToken.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./KyberNetworkProxy.sol";
 
 contract KyberUniArbContract {
-
+  // Variable to hold owner of contract. Set on deploy.
   address public owner;
 
-  event ethToToken(address trader, uint256 eth, uint256 tokens, uint256 token_bought);
-  event tokenToEth(address trader, uint256 sell_eth_value, uint256 max_sell_tokens, uint256 tokens_sold);
+  // Events
+  event ethToToken(address trader, uint256 tokens, uint256 token_bought);
+  event tokenToEth(address trader, uint256 ethToBuy, uint256 maxTokensSell, uint256 tokens_sold);
 
+  /**
+   * @dev Contract constructor. Set owner of contract as deployer.
+   */
   constructor() public {
     owner = msg.sender;
   }
 
+  /**
+   * @dev Approves UniSwap exchange to transfer tokens from contract.
+   * @param tokenAddress Address of the token to approve
+   * @param exchangeAddress UniSwap Exchange address
+   * @param amount Token amount to approve
+   */
   function approveToken(address tokenAddress, address exchangeAddress, uint amount) public {
     require(msg.sender == owner, "Only Owner Can Approve");
-
-    GLDToken token = GLDToken(tokenAddress);
-
+    ERC20 token = ERC20(tokenAddress);
     token.approve(exchangeAddress, amount);
   }
 
+  /**
+   * @dev Executes trade.
+   * @param kyberExchangeAddress Kyber network address
+   * @param tokenAddress Address of the token that is being traded
+   * @param kyberMinConversionRate Min conversion rate for Kyber
+   * @param uniSwapExchangeAddress UniSwap exchange address
+   * @param ethToSell Amount of Eth that is being traded via Kyber. Should be sent as value too.
+   * @param maxTokensSell Maximum ERC20 tokens sold in Uniswap trade.
+   * @param sellDeadline Uniswap transaction deadline.
+   * @param ethToBuy Amount of Eth bought in Uniswap trade.
+   */
   function trade(
-    address kyberExchangeAddr,
+    address kyberExchangeAddress,
     address tokenAddress,
-    uint256 minConversionRate,
-    address uniSwapExchangeAddr,
-    uint256 min_buy_tokens,
-    uint256 buy_eth_value,
-    uint256 max_sell_tokens,
-    uint256 sell_deadline,
-    uint256 sell_eth_value)
-    public payable {
-      require(msg.value >= buy_eth_value, "Not Enough Eth Sent");
+    uint256 kyberMinConversionRate,
+    address uniSwapExchangeAddress,
+    uint256 ethToSell,
+    uint256 maxTokensSell,
+    uint256 sellDeadline,
+    uint256 ethToBuy
+  ) public
+    payable
+  {
+    require(msg.value >= ethToSell, "Not Enough Eth Sent");
+    // check approval
 
-      KyberNetworkProxy kyberExchange = KyberNetworkProxy(kyberExchangeAddr);
+    KyberNetworkProxy kyberExchange = KyberNetworkProxy(kyberExchangeAddress);
+    ERC20 token = ERC20(tokenAddress);
 
-      GLDToken token = GLDToken(tokenAddress);
+    // Swaps Eth for Token via Kyber Exchange
+    uint256 token_bought = kyberExchange.swapEtherToToken.value(ethToSell)(token, kyberMinConversionRate);
+    emit ethToToken(msg.sender, ethToSell, token_bought);
 
-      uint256 token_bought = kyberExchange.swapEtherToToken.value(buy_eth_value)(token, minConversionRate);
-      emit ethToToken(msg.sender, buy_eth_value, min_buy_tokens, token_bought);
-
-      UniswapExchange uniSwapExchange = UniswapExchange(uniSwapExchangeAddr);
-      uint256 tokens_sold = uniSwapExchange.tokenToEthTransferOutput(sell_eth_value, max_sell_tokens, sell_deadline, msg.sender);
-      emit tokenToEth(msg.sender, sell_eth_value, max_sell_tokens, tokens_sold);
+    // Swaps token to Eth and transfers Eth to msg sender address
+    UniswapExchange uniSwapExchange = UniswapExchange(uniSwapExchangeAddress);
+    uint256 tokens_sold = uniSwapExchange.tokenToEthTransferOutput(ethToBuy, maxTokensSell, sellDeadline, msg.sender);
+    emit tokenToEth(msg.sender, ethToBuy, maxTokensSell, tokens_sold);
   }
 
   function tradeEthToToken(
-    address kyberExchangeAddr,
+    address kyberExchangeAddress,
     address tokenAddress,
-    uint256 minConversionRate,
-    uint256 buy_eth_value)
+    uint256 kyberMinConversionRate,
+    uint256 ethToSell)
     public payable {
-      require(msg.value >= buy_eth_value, "Not Enough Eth Sent");
+      require(msg.value >= ethToSell, "Not Enough Eth Sent");
 
-      KyberNetworkProxy kyberExchange = KyberNetworkProxy(kyberExchangeAddr);
+      KyberNetworkProxy kyberExchange = KyberNetworkProxy(kyberExchangeAddress);
 
-      GLDToken token = GLDToken(tokenAddress);
+      ERC20 token = ERC20(tokenAddress);
 
-      uint256 token_bought = kyberExchange.swapEtherToToken.value(buy_eth_value)(token, minConversionRate);                    // Swap Eth to token in UniSwap
-      emit ethToToken(msg.sender, buy_eth_value, minConversionRate, token_bought);
+      uint256 token_bought = kyberExchange.swapEtherToToken.value(ethToSell)(token, kyberMinConversionRate);                    // Swap Eth to token in UniSwap
+      emit ethToToken(msg.sender, ethToSell, token_bought);
   }
 
   function tradeTokenToEth(
-    address uniSwapExchangeAddr,
-    uint256 max_sell_tokens,
-    uint256 sell_deadline,
-    uint256 sell_eth_value)
+    address uniSwapExchangeAddress,
+    uint256 maxTokensSell,
+    uint256 sellDeadline,
+    uint256 ethToBuy)
     public {
       // Should check approval - see Kyber example?
 
-      UniswapExchange uniSwapExchange = UniswapExchange(uniSwapExchangeAddr);
+      UniswapExchange uniSwapExchange = UniswapExchange(uniSwapExchangeAddress);
 
-      uint256 tokens_sold = uniSwapExchange.tokenToEthTransferOutput(sell_eth_value, max_sell_tokens, sell_deadline, msg.sender);
+      uint256 tokens_sold = uniSwapExchange.tokenToEthTransferOutput(ethToBuy, maxTokensSell, sellDeadline, msg.sender);
 
-      emit tokenToEth(msg.sender, sell_eth_value, max_sell_tokens, tokens_sold);
+      emit tokenToEth(msg.sender, ethToBuy, maxTokensSell, tokens_sold);
   }
 
   function getBalance() public view returns (uint256) {

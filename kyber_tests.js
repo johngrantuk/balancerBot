@@ -10,7 +10,7 @@ const UniSwap = require('@uniswap/sdk');
 
 require('dotenv').config();
 
-var ISLIVE = false;
+var ISLIVE = true;
 
 // Token Details
 const SRC_TOKEN = "ETH";
@@ -19,19 +19,21 @@ const SRC_DECIMALS = 18;
 const DST_DECIMALS = 12;
 // Kyber Network Proxy Contract Address
 // https://developer.kyber.network/docs/Environments-Rinkeby/#docsNav
-let web3, DST_TOKEN, DST_TOKEN_ADDRESS, KYBER_NETWORK_PROXY_ADDRESS, chainIdOrProvider;
+let web3, DST_TOKEN, DST_TOKEN_ADDRESS, KYBER_NETWORK_PROXY_ADDRESS, chainIdOrProvider, uniswapAddress;
 if(ISLIVE){
     web3 = new Web3(new Web3.providers.HttpProvider(process.env.INFURAMAIN));
     DST_TOKEN = "DAI";
     DST_TOKEN_ADDRESS = '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359' // DAI Mainnet
     KYBER_NETWORK_PROXY_ADDRESS = "0x818E6FECD516Ecc3849DAf6845e3EC868087B755"; // Mainnet
     chainIdOrProvider = 1;
+    uniswapAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';        // Mainnet
 }else{
     web3 = new Web3(new Web3.providers.HttpProvider(process.env.INFURARINKEBY));
     DST_TOKEN = "OMG";
     DST_TOKEN_ADDRESS = '0x732fBA98dca813C3A630b53a8bFc1d6e87B1db65' // OMG Rinkeby
     KYBER_NETWORK_PROXY_ADDRESS = "0xF77eC7Ed5f5B9a5aee4cfa6FFCaC6A4C315BaC76"; // Rinkeby
     chainIdOrProvider = 4;
+    uniswapAddress = '0xf5D915570BC477f9B8D6C0E980aA81757A3AaC36';        // rinkeby
 }
 
 // KyberNetworkProxy Contract ABI
@@ -127,7 +129,7 @@ async function checkEthToToken(){
 
 async function checkCompleteTrade(){
   const account = '0xeE398666cA860DFb7390b5D73EE927e9Fb41a60A';
-  var uniswapAddress = '0xf5D915570BC477f9B8D6C0E980aA81757A3AaC36';        // rinkeby
+
   const privateKey = Buffer.from(process.env.PRIVATEKEY, 'hex',);
   const arbContractAddress = '0xbaA1f8d938c064322C0D9c2DC68f0e516AE35678';  // Update with deployed address
 
@@ -141,19 +143,19 @@ async function checkCompleteTrade(){
   console.log('Arb Contract Balance: ' + contractBalance);
 
   let exchange = await uniswapContract.methods.getExchange(DST_TOKEN_ADDRESS).call();
-  console.log("the exchange address for ERC20 token is:" + exchange);
+  console.log("The Uniswap exchange address for " + DST_TOKEN + " token is:" + exchange);
 
   let exchangeContract = new web3.eth.Contract(JSON.parse(UNISWAP_EXCHANGE_ABI), exchange);
 
   const tokenContract = new web3.eth.Contract(TokenContract.abi, DST_TOKEN_ADDRESS);
   var allowance = await tokenContract.methods.allowance(arbContractAddress, exchange).call();
-  console.log('Allowance: ' + allowance.toString());
-
-  var totalSupply = await tokenContract.methods.totalSupply().call();
-  console.log('Total supply: ' + totalSupply.toString());
+  //console.log('Allowance: ' + allowance.toString());
 
   if(allowance == '0'){
     console.log('Approving token...');
+    /*
+    var totalSupply = await tokenContract.methods.totalSupply().call();
+    console.log('Total supply: ' + totalSupply.toString());
     var tx = await arbContract.methods.approveToken(DST_TOKEN_ADDRESS, exchange, totalSupply);
     var encodedABI = tx.encodeABI();
     var txCount = await web3.eth.getTransactionCount(account);
@@ -177,31 +179,30 @@ async function checkCompleteTrade(){
     // console.log(receipt);
     allowance = await tokenContract.methods.allowance(arbContractAddress, exchange).call();
     console.log('Allowance: ' + allowance.toString());
+    */
   }
+  console.log('Token Approved.');
+
+  const tokenReserves = await UniSwap.getTokenReserves(DST_TOKEN_ADDRESS, chainIdOrProvider);
+  // const marketDetails = UniSwap.getMarketDetails(undefined, tokenReserves) // ETH<>ERC20
+  const marketDetails = UniSwap.getMarketDetails(tokenReserves, undefined); // ERC20<>ETH
+  // console.log(marketDetails)
+  // console.log(marketDetails.inputReserves.ethReserve.token)
+  console.log('Uniswap Eth Reserve: ' + web3.utils.fromWei(web3.utils.toBN(marketDetails.inputReserves.ethReserve.amount), 'ether'))
+  // console.log(marketDetails.inputReserves.tokenReserve.token)
+  console.log('Uniswap Token Reserve: ' + web3.utils.fromWei(web3.utils.toBN(marketDetails.inputReserves.tokenReserve.amount), 'ether'))
+
+  var rate = marketDetails.marketRate.rate;
+  var rateInverted = marketDetails.marketRate.rateInverted;
+  console.log('\nUniswap (' + DST_TOKEN + ' -> Eth): ' + marketDetails.marketRate.rate.toString() + ' (' + rateInverted.toString() + ')');
+  // console.log('Market Rate Inverted: ' + marketDetails.marketRate.rateInverted.toString());
 
   var rates = await KYBER_NETWORK_PROXY_CONTRACT.methods
     .getExpectedRate(SRC_TOKEN_ADDRESS, DST_TOKEN_ADDRESS, SRC_QTY_WEI)
     .call();
 
-  console.log('Kyber Rates (Eth -> OMG):');
-  // console.log(rates);
   var ethErc20 = web3.utils.fromWei(rates.expectedRate, 'ether');
-  console.log(ethErc20);
-
-  const tokenReserves = await UniSwap.getTokenReserves(DST_TOKEN_ADDRESS, chainIdOrProvider);
-  // const marketDetails = UniSwap.getMarketDetails(undefined, tokenReserves) // ETH<>ERC20
-  const marketDetails = UniSwap.getMarketDetails(tokenReserves, undefined); // ERC20<>ETH
-
-  console.log('Uniswap (OMG -> Eth): ');
-  // console.log(marketDetails)
-  // console.log(marketDetails.inputReserves.ethReserve.token)
-  console.log('Eth Reserve: ' + web3.utils.fromWei(marketDetails.inputReserves.ethReserve.amount.toString(), 'ether'))
-  // console.log(marketDetails.inputReserves.tokenReserve.token)
-  console.log('Token Reserve: ' + web3.utils.fromWei(marketDetails.inputReserves.tokenReserve.amount.toString(), 'ether'))
-  var rate = marketDetails.marketRate.rate;
-  var rateInverted = marketDetails.marketRate.rateInverted;
-  console.log('Market Rate (OMG -> ETH): ' + marketDetails.marketRate.rate.toString());
-  // console.log('Market Rate Inverted: ' + marketDetails.marketRate.rateInverted.toString());
+  console.log('Kyber (Eth -> ' + DST_TOKEN + '): ' + ethErc20);
 
   // DECISION TO TRADE OR NOT IS MADE HERE
 
