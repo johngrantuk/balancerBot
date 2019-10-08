@@ -1,5 +1,7 @@
 ## Explanation
 
+Developed using Truffle, easy to write, test and deploy contracts, etc.
+
 ### KyberUniArbContract
 Main contract.
 By default the address that deploys the contract is the owner.

@@ -1,7 +1,7 @@
 pragma solidity ^0.5.0;
 
 import "./UniswapExchange.sol";
-import "./GLDToken.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract RinkebyArbContract {
 
@@ -17,7 +17,7 @@ contract RinkebyArbContract {
   function approveToken(address tokenAddress, address exchangeAddress, uint amount) public {
     require(msg.sender == owner, "Only Owner Can Approve");
 
-    GLDToken token = GLDToken(tokenAddress);
+    ERC20 token = ERC20(tokenAddress);
 
     token.approve(exchangeAddress, amount);
   }
@@ -63,7 +63,7 @@ contract RinkebyArbContract {
     uint256 sell_eth_value)
     public {
       // Should check approval?
-      
+
       UniswapExchange uniSwapExchange = UniswapExchange(uniSwapExchangeAddr);
 
       uint256 tokens_sold = uniSwapExchange.tokenToEthTransferOutput(sell_eth_value, max_sell_tokens, sell_deadline, msg.sender);

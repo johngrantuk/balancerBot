@@ -4,7 +4,7 @@ import "./UniswapExchange.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./KyberNetworkProxy.sol";
 
-contract KyberUniArbContract {
+contract KyberTestContract {
   // Variable to hold owner of contract. Set on deploy.
   address public owner;
 
@@ -68,5 +68,40 @@ contract KyberUniArbContract {
     UniswapExchange uniSwapExchange = UniswapExchange(uniSwapExchangeAddress);
     uint256 tokens_sold = uniSwapExchange.tokenToEthTransferOutput(ethToBuy, maxTokensSell, sellDeadline, msg.sender);
     emit tokenToEth(msg.sender, ethToBuy, maxTokensSell, tokens_sold);
+  }
+
+  function tradeEthToToken(
+    address kyberExchangeAddress,
+    address tokenAddress,
+    uint256 kyberMinConversionRate,
+    uint256 ethToSell)
+    public payable {
+      require(msg.value >= ethToSell, "Not Enough Eth Sent");
+
+      KyberNetworkProxy kyberExchange = KyberNetworkProxy(kyberExchangeAddress);
+
+      ERC20 token = ERC20(tokenAddress);
+
+      uint256 token_bought = kyberExchange.swapEtherToToken.value(ethToSell)(token, kyberMinConversionRate);                    // Swap Eth to token in UniSwap
+      emit ethToToken(msg.sender, ethToSell, token_bought);
+  }
+
+  function tradeTokenToEth(
+    address uniSwapExchangeAddress,
+    uint256 maxTokensSell,
+    uint256 sellDeadline,
+    uint256 ethToBuy)
+    public {
+      // Should check approval - see Kyber example?
+
+      UniswapExchange uniSwapExchange = UniswapExchange(uniSwapExchangeAddress);
+
+      uint256 tokens_sold = uniSwapExchange.tokenToEthTransferOutput(ethToBuy, maxTokensSell, sellDeadline, msg.sender);
+
+      emit tokenToEth(msg.sender, ethToBuy, maxTokensSell, tokens_sold);
+  }
+
+  function getBalance() public view returns (uint256) {
+    return address(this).balance;
   }
 }

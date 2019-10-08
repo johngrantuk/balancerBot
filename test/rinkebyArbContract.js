@@ -1,7 +1,7 @@
 const truffleAssert = require('truffle-assertions');
 const RinkebyArbContract = artifacts.require("./RinkebyArbContract.sol");
 const UniswapExchange = artifacts.require("./UniswapExchange.sol");
-const GLDToken = artifacts.require("./GLDToken.sol");
+const ERC20Token =  artifacts.require("./ERC20Token.sol");
 
 contract("RinkebyArbContract", accounts => {
 
@@ -148,7 +148,7 @@ contract("RinkebyArbContract", accounts => {
     const RinkebyArbContractInstance = await RinkebyArbContract.deployed();
 
     await truffleAssert.reverts(
-      RinkebyArbContractInstance.approveToken(GLDToken.address, UniswapExchange.address, 1234,
+      RinkebyArbContractInstance.approveToken(ERC20Token.address, UniswapExchange.address, 1234,
         { from: accounts[1]}),
       "Only Owner Can Approve"
     );
@@ -156,7 +156,7 @@ contract("RinkebyArbContract", accounts => {
 
   it("...should call approveToken.", async () => {
     const RinkebyArbContractInstance = await RinkebyArbContract.deployed();
-    const tokenInstance = await GLDToken.deployed();
+    const tokenInstance = await ERC20Token.deployed();
 
     var allowance = await tokenInstance.allowance(RinkebyArbContract.address, UniswapExchange.address);
     console.log('Allowance: ' + allowance.toString());
@@ -165,7 +165,7 @@ contract("RinkebyArbContract", accounts => {
     var totalSupply = await tokenInstance.totalSupply();
     console.log('Total supply: ' + totalSupply.toString());
 
-    await RinkebyArbContractInstance.approveToken(GLDToken.address, UniswapExchange.address, totalSupply,
+    await RinkebyArbContractInstance.approveToken(ERC20Token.address, UniswapExchange.address, totalSupply,
         { from: accounts[0]});
 
     allowance = await tokenInstance.allowance(RinkebyArbContract.address, UniswapExchange.address);
