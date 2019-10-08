@@ -2,8 +2,9 @@ pragma solidity ^0.5.0;
 
 import "./UniswapExchange.sol";
 import "./GLDToken.sol";
+import "./KyberNetworkProxy.sol";
 
-contract RinkebyArbContract {
+contract KyberUniArbContract {
 
   address public owner;
 
@@ -23,9 +24,11 @@ contract RinkebyArbContract {
   }
 
   function trade(
+    address kyberExchangeAddr,
+    address tokenAddress,
+    uint256 minConversionRate,
     address uniSwapExchangeAddr,
     uint256 min_buy_tokens,
-    uint256 buy_deadline,
     uint256 buy_eth_value,
     uint256 max_sell_tokens,
     uint256 sell_deadline,
@@ -33,27 +36,32 @@ contract RinkebyArbContract {
     public payable {
       require(msg.value >= buy_eth_value, "Not Enough Eth Sent");
 
-      UniswapExchange uniSwapExchange = UniswapExchange(uniSwapExchangeAddr);
+      KyberNetworkProxy kyberExchange = KyberNetworkProxy(kyberExchangeAddr);
 
-      uint256 token_bought = uniSwapExchange.ethToTokenSwapInput.value(buy_eth_value)(min_buy_tokens, buy_deadline);                    // Swap Eth to token in UniSwap
+      GLDToken token = GLDToken(tokenAddress);
+
+      uint256 token_bought = kyberExchange.swapEtherToToken.value(buy_eth_value)(token, minConversionRate);
       emit ethToToken(msg.sender, buy_eth_value, min_buy_tokens, token_bought);
 
+      UniswapExchange uniSwapExchange = UniswapExchange(uniSwapExchangeAddr);
       uint256 tokens_sold = uniSwapExchange.tokenToEthTransferOutput(sell_eth_value, max_sell_tokens, sell_deadline, msg.sender);
       emit tokenToEth(msg.sender, sell_eth_value, max_sell_tokens, tokens_sold);
   }
 
   function tradeEthToToken(
-    address uniSwapExchangeAddr,
-    uint256 min_buy_tokens,
-    uint256 buy_deadline,
+    address kyberExchangeAddr,
+    address tokenAddress,
+    uint256 minConversionRate,
     uint256 buy_eth_value)
     public payable {
       require(msg.value >= buy_eth_value, "Not Enough Eth Sent");
 
-      UniswapExchange uniSwapExchange = UniswapExchange(uniSwapExchangeAddr);
+      KyberNetworkProxy kyberExchange = KyberNetworkProxy(kyberExchangeAddr);
 
-      uint256 token_bought = uniSwapExchange.ethToTokenSwapInput.value(buy_eth_value)(min_buy_tokens, buy_deadline);                    // Swap Eth to token in UniSwap
-      emit ethToToken(msg.sender, buy_eth_value, min_buy_tokens, token_bought);
+      GLDToken token = GLDToken(tokenAddress);
+
+      uint256 token_bought = kyberExchange.swapEtherToToken.value(buy_eth_value)(token, minConversionRate);                    // Swap Eth to token in UniSwap
+      emit ethToToken(msg.sender, buy_eth_value, minConversionRate, token_bought);
   }
 
   function tradeTokenToEth(
@@ -62,8 +70,8 @@ contract RinkebyArbContract {
     uint256 sell_deadline,
     uint256 sell_eth_value)
     public {
-      // Should check approval?
-      
+      // Should check approval - see Kyber example?
+
       UniswapExchange uniSwapExchange = UniswapExchange(uniSwapExchangeAddr);
 
       uint256 tokens_sold = uniSwapExchange.tokenToEthTransferOutput(sell_eth_value, max_sell_tokens, sell_deadline, msg.sender);

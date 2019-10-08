@@ -2,6 +2,7 @@
 const fs = require('fs');
 const Tx = require('ethereumjs-tx').Transaction;
 let RinkebyArbContract = JSON.parse(fs.readFileSync("client/src/contracts/RinkebyArbContract.json"));
+let TokenContract = JSON.parse(fs.readFileSync("client/src/contracts/GLDToken.json"));
 let Web3 = require("web3");
 const BigNumber = require('bignumber.js');
 const UniSwap = require('@uniswap/sdk');
@@ -85,13 +86,14 @@ var account = '0xeE398666cA860DFb7390b5D73EE927e9Fb41a60A';
 async function checkEthToToken(){
   var factoryAddress = '0xf5D915570BC477f9B8D6C0E980aA81757A3AaC36'; // rinkeby
   var oceanToken = '0xCC4d8eCFa6a5c1a84853EC5c0c08Cc54Cb177a6A';
+  var arbContractAddress = '0x8B4Ea90f1357c7Aa975708252F6Afd480595056b';
   var accountBalance = await web3.eth.getBalance(account);
   console.log(accountBalance.toString());
 
   console.log(RinkebyArbContract.contractName)
-  const arbContract = new web3.eth.Contract(RinkebyArbContract.abi, '0x11BCaaA48024FBA857C0F3D75f68C03AD4fbCD74');
+  const arbContract = new web3.eth.Contract(RinkebyArbContract.abi, arbContractAddress);
 
-  var contractBalance = await web3.eth.getBalance('0x11BCaaA48024FBA857C0F3D75f68C03AD4fbCD74');
+  var contractBalance = await web3.eth.getBalance(arbContractAddress);
   console.log(contractBalance);
 
   const uniswap = new web3.eth.Contract(JSON.parse(abi), factoryAddress);
@@ -145,7 +147,7 @@ async function checkEthToToken(){
     gasLimit: web3.utils.toHex(6000000),
     gasPrice: web3.utils.toHex(10000000000), // 10 Gwei
     //to: executionDetails.exchangeAddress,
-    to: '0x11BCaaA48024FBA857C0F3D75f68C03AD4fbCD74',
+    to: arbContractAddress,
     from: account,
     data: encodedABI,
     value: web3.utils.toHex(value)
@@ -178,7 +180,7 @@ async function checkEthToToken(){
   accountBalance = await web3.eth.getBalance(account);
   console.log(accountBalance.toString());
 
-  contractBalance = await web3.eth.getBalance('0x11BCaaA48024FBA857C0F3D75f68C03AD4fbCD74');
+  contractBalance = await web3.eth.getBalance(arbContractAddress);
   console.log(contractBalance.toString());
 
   await checkToken(oceanToken);
@@ -188,25 +190,65 @@ async function checkEthToToken(){
 async function checkTokenToEth(){
   var factoryAddress = '0xf5D915570BC477f9B8D6C0E980aA81757A3AaC36'; // rinkeby
   var oceanToken = '0xCC4d8eCFa6a5c1a84853EC5c0c08Cc54Cb177a6A';
+  var arbContractAddress = '0x8B4Ea90f1357c7Aa975708252F6Afd480595056b';
   var accountBalance = await web3.eth.getBalance(account);
-  console.log(accountBalance.toString());
+  console.log('Account Balance: ' + accountBalance.toString());
 
-  console.log(RinkebyArbContract.contractName)
-  const arbContract = new web3.eth.Contract(RinkebyArbContract.abi, '0x11BCaaA48024FBA857C0F3D75f68C03AD4fbCD74');
-
-  var contractBalance = await web3.eth.getBalance('0x11BCaaA48024FBA857C0F3D75f68C03AD4fbCD74');
-  console.log(contractBalance);
+  const arbContract = new web3.eth.Contract(RinkebyArbContract.abi, arbContractAddress);
+  var contractBalance = await web3.eth.getBalance(arbContractAddress);
+  console.log('Arb Contract Balance: ' + contractBalance);
 
   const uniswap = new web3.eth.Contract(JSON.parse(abi), factoryAddress);
 
   let exchange = await uniswap.methods.getExchange(oceanToken).call();
   console.log("the exchange address for ERC20 token is:" + exchange);
 
+  const tokenContract = new web3.eth.Contract(TokenContract.abi, oceanToken);
+  var allowance = await tokenContract.methods.allowance(arbContractAddress, exchange).call();
+  console.log('Allowance: ' + allowance.toString());
+
+  var totalSupply = await tokenContract.methods.totalSupply().call();
+  console.log('Total supply: ' + totalSupply.toString());
+
+  var tx = await arbContract.methods.approveToken(oceanToken, exchange, totalSupply);
+  var encodedABI = tx.encodeABI();
+
+  var txCount = await web3.eth.getTransactionCount(account);
+  console.log('Tx Count: ' + txCount);
+  // console.log(encodedABI)
+
+  // construct the transaction data
+  var txData = {
+    nonce: web3.utils.toHex(txCount),
+    gasLimit: web3.utils.toHex(6000000),
+    gasPrice: web3.utils.toHex(10000000000), // 10 Gwei
+    to: arbContractAddress,
+    from: account,
+    data: encodedABI
+  }
+
+  const privateKey = Buffer.from(
+    process.env.PRIVATEKEY,
+    'hex',
+  )
+  var transaction = new Tx(txData, {'chain':'rinkeby'});
+  transaction.sign(privateKey);
+  console.log('Signed...')
+
+  var serializedTx = transaction.serialize().toString('hex');
+  console.log('Sending...')
+  var receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx);
+  console.log('\nReceipt:')
+  console.log(receipt);
+
+  allowance = await tokenContract.methods.allowance(arbContractAddress, exchange).call();
+  console.log('Allowance: ' + allowance.toString());
+
   let exchangeContract = new web3.eth.Contract(JSON.parse(exchangeAbi), exchange);
 
   await checkToken(oceanToken);
 
-  var tokensToSwap = web3.utils.toWei('0.367531313799687994', 'ether');
+  var tokensToSwap = web3.utils.toWei('0.335615845101250071', 'ether');
 
   const tokenReserves = await UniSwap.getTokenReserves(oceanToken, chainIdOrProvider);
   // const tradeDetails = await UniSwap.tradeExactEthForTokensWithData(tokenReserves, ethToSwap);
@@ -224,50 +266,45 @@ async function checkTokenToEth(){
   console.log('1: ' + eth)
   console.log('value: ' + value)
 
-  const tx = arbContract.methods.tradeTokenToEth(executionDetails.exchangeAddress, max_sell_tokens, executionDetails.methodArguments[2], value);
-  const encodedABI = tx.encodeABI();
+  tx = arbContract.methods.tradeTokenToEth(executionDetails.exchangeAddress, max_sell_tokens, executionDetails.methodArguments[2], eth);
+  encodedABI = tx.encodeABI();
 
   var txCount = await web3.eth.getTransactionCount(account);
   console.log('Tx Count: ' + txCount);
   // console.log(encodedABI)
 
   // construct the transaction data
-  const txData = {
+  txData = {
     nonce: web3.utils.toHex(txCount),
     gasLimit: web3.utils.toHex(6000000),
     gasPrice: web3.utils.toHex(10000000000), // 10 Gwei
     //to: executionDetails.exchangeAddress,
-    to: '0x11BCaaA48024FBA857C0F3D75f68C03AD4fbCD74',
+    to: arbContractAddress,
     from: account,
     data: encodedABI,
     value: web3.utils.toHex(value)
   }
 
-  const privateKey = Buffer.from(
-    process.env.PRIVATEKEY,
-    'hex',
-  )
-
-  const transaction = new Tx(txData, {'chain':'rinkeby'});
+  transaction = new Tx(txData, {'chain':'rinkeby'});
   transaction.sign(privateKey);
   console.log('Signed...')
 
-  const serializedTx = transaction.serialize().toString('hex');
+  serializedTx = transaction.serialize().toString('hex');
   console.log('Sending...')
-  var receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx);
+  receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx);
   console.log('\nReceipt:')
   console.log(receipt);
-  
 
   accountBalance = await web3.eth.getBalance(account);
   console.log(accountBalance.toString());
 
-  contractBalance = await web3.eth.getBalance('0x11BCaaA48024FBA857C0F3D75f68C03AD4fbCD74');
+  contractBalance = await web3.eth.getBalance(arbContractAddress);
   console.log(contractBalance.toString());
 
   await checkToken(oceanToken);
-
 }
-
 // run();
 checkTokenToEth()
+// checkEthToToken();
+// 18557155622000000000
+// 18565872998254917095

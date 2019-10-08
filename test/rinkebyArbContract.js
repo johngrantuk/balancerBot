@@ -1,6 +1,7 @@
 const truffleAssert = require('truffle-assertions');
 const RinkebyArbContract = artifacts.require("./RinkebyArbContract.sol");
 const UniswapExchange = artifacts.require("./UniswapExchange.sol");
+const GLDToken = artifacts.require("./GLDToken.sol");
 
 contract("RinkebyArbContract", accounts => {
 
@@ -135,6 +136,41 @@ contract("RinkebyArbContract", accounts => {
       return true;
         //return ev.player === bettingAccount && !ev.betNumber.eq(ev.winningNumber);
     });
+  });
+
+  it("...should have owner as deployer.", async () => {
+    const RinkebyArbContractInstance = await RinkebyArbContract.deployed();
+    const contractOwner = await RinkebyArbContractInstance.owner.call();
+    assert.equal(contractOwner, accounts[0], "Deployer should be owner.");
+  });
+
+  it("...should fail if non-owner calls approveToken.", async () => {
+    const RinkebyArbContractInstance = await RinkebyArbContract.deployed();
+
+    await truffleAssert.reverts(
+      RinkebyArbContractInstance.approveToken(GLDToken.address, UniswapExchange.address, 1234,
+        { from: accounts[1]}),
+      "Only Owner Can Approve"
+    );
+  });
+
+  it("...should call approveToken.", async () => {
+    const RinkebyArbContractInstance = await RinkebyArbContract.deployed();
+    const tokenInstance = await GLDToken.deployed();
+
+    var allowance = await tokenInstance.allowance(RinkebyArbContract.address, UniswapExchange.address);
+    console.log('Allowance: ' + allowance.toString());
+    assert.equal('0', allowance.toString(), 'Should have no allowance initially');
+
+    var totalSupply = await tokenInstance.totalSupply();
+    console.log('Total supply: ' + totalSupply.toString());
+
+    await RinkebyArbContractInstance.approveToken(GLDToken.address, UniswapExchange.address, totalSupply,
+        { from: accounts[0]});
+
+    allowance = await tokenInstance.allowance(RinkebyArbContract.address, UniswapExchange.address);
+    console.log('Allowance: ' + allowance.toString());
+    assert.equal(totalSupply.toString(), allowance.toString(), 'Should be total supply of token');
   });
 
 });
