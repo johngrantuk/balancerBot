@@ -2,6 +2,10 @@
 
 Developed using Truffle, easy to write, test and deploy contracts, etc.
 
+Initial spec UniSwap <-> Balancer Arbitrage.
+
+As Balancer contract interfaces aren't ready yet decided to [Kyber Network](https://developer.kyber.network/docs/Start/), on-chain liquidity protocol to demonstrate swapping between two protocols. The contract and bot is written in a way that make it easy to swap out the Kyber function for Balancer.
+
 ### KyberUniArbContract
 Main contract.
 By default the address that deploys the contract is the owner.
@@ -9,13 +13,22 @@ Only the owner can approve tokens - !!!!Need more explanation. Done via approveT
 
 Approve - UniSwap contract will be trusted but still not best practice?
 
+## Testing
+
+Two approaches to testing.
+
+First unit tests in test folder. Covers:
+
+Second testing full functions on Rinkeby with Kyber/UniSwap functions. See testScriptsKyber.js
+
 ## To Do
 
-Comments.
-Make contract ownable OpenZeppelin.
-Add some events/logs so we can see whats going on when deployed.
+Tidy/comment testScriptsKyber.js.
+Bot tidied & finished.
 
-Meta-transactions?
+Add some events/log processing to Bot.
+
+Meta-transaction type method?
   Would allow any user to approve themselves?
   Arb contract just functions as relayer.
   Would still need some kind of approval so no-one takes advantage of contract? Or make it so caller still spends gas, etc.

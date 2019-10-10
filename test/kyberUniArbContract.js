@@ -44,29 +44,33 @@ contract("KyberUniArbContract", accounts => {
   });
 
   it("...should fail on 2nd trade, revert and return funds minus gas.", async () => {
-
-    var min_buy_tokens = web3.utils.toWei('1', 'ether');
-    var buy_deadline = 25;
-    var buy_eth_value = web3.utils.toWei('1', 'ether');
-    var sell_tokens = min_buy_tokens;
-    var sell_deadline = 19;
-    var min_sell_eth_value = web3.utils.toWei('1.1', 'ether');
+    // Testing atomic trading works. i.e. if first trade is succesfull but 2nd fails make sure no Eth is lost.
+    var kyberExchangeAddress = "0xF77eC7Ed5f5B9a5aee4cfa6FFCaC6A4C315BaC76";
+    var tokenAddress = '0x732fBA98dca813C3A630b53a8bFc1d6e87B1db65';
+    var kyberMinConversionRate = web3.utils.toWei('1', 'ether');
+    var uniSwapExchangeAddress = UniswapExchange.address;
+    var ethToSell = web3.utils.toWei('1', 'ether');
+    var maxTokensSell = web3.utils.toWei('1', 'ether');
+    var sellDeadline = 'THIS SHOULD FAIL';
+    var ethToBuy = web3.utils.toWei('2', 'ether');
+    var valueEthSent = web3.utils.toWei('0.5', 'ether');
 
     let account_one_starting_balance = await web3.eth.getBalance(accounts[0]); // wei
     console.log('Starting Balance: ' + web3.utils.fromWei(account_one_starting_balance, 'ether'));
     account_one_starting_balance = new web3.utils.BN(account_one_starting_balance);
 
-    await truffleAssert.reverts(
+    // Should intentionally fail because of maxTokensSell. This is after Kyber trade.
+    await truffleAssert.fails(
       KyberUniArbContractInstance.trade(
-        UniswapExchange.address,
-        min_buy_tokens,
-        buy_deadline,
-        buy_eth_value,
-        sell_tokens,
-        sell_deadline,
-        min_sell_eth_value,
-        { from: accounts[0], value: min_buy_tokens }),
-      "Token To Eth Deadline Out"
+        kyberExchangeAddress,
+        tokenAddress,
+        kyberMinConversionRate,
+        uniSwapExchangeAddress,
+        ethToSell,
+        maxTokensSell,
+        sellDeadline,
+        ethToBuy,
+        { from: accounts[0], value: valueEthSent })
     );
 
     let account_one_ending_balance = await web3.eth.getBalance(accounts[0]); // wei
@@ -74,33 +78,37 @@ contract("KyberUniArbContract", accounts => {
     account_one_ending_balance = new web3.utils.BN(account_one_ending_balance);
 
     // end > start - buy
-    let check = account_one_ending_balance.gt(account_one_starting_balance.sub(new web3.utils.BN(min_buy_tokens)));
+    let check = account_one_ending_balance.gt(account_one_starting_balance.sub(new web3.utils.BN(ethToSell)));
     assert.isTrue(check, "should only cost gas.");
   });
 
+/*
+  THIS NEEDS KYBER CONTRACT DEPLOYED ON TEST - See testScriptsKyber.js for full tests on Rinkeby
   it("...should execute trade.", async () => {
-
-    var min_buy_tokens = web3.utils.toWei('1', 'ether');
-    var buy_deadline = 25;
-    var buy_eth_value = web3.utils.toWei('1', 'ether');
-    var max_sell_tokens = min_buy_tokens;
-    var sell_deadline = 25;
-    var sell_eth_value = web3.utils.toWei('1.1', 'ether');
-    var sell_eth_bn = new web3.utils.BN(sell_eth_value);
+    var kyberExchangeAddress = "0xF77eC7Ed5f5B9a5aee4cfa6FFCaC6A4C315BaC76";
+    var tokenAddress = '0x732fBA98dca813C3A630b53a8bFc1d6e87B1db65';
+    var kyberMinConversionRate = web3.utils.toWei('1', 'ether');
+    var uniSwapExchangeAddress = UniswapExchange.address;
+    var ethToSell = web3.utils.toWei('1', 'ether');
+    var maxTokensSell = web3.utils.toWei('1', 'ether');
+    var sellDeadline = 11111;
+    var ethToBuy = web3.utils.toWei('1.1', 'ether');
+    var valueEthSent = web3.utils.toWei('1', 'ether');
 
     let account_one_starting_balance = await web3.eth.getBalance(accounts[0]); // wei
     console.log('Starting Balance: ' + web3.utils.fromWei(account_one_starting_balance, 'ether'));
     account_one_starting_balance = new web3.utils.BN(account_one_starting_balance);
 
     let txHash = await KyberUniArbContractInstance.trade(
-        UniswapExchange.address,
-        min_buy_tokens,
-        buy_deadline,
-        buy_eth_value,
-        max_sell_tokens,
-        sell_deadline,
-        sell_eth_value,
-        { from: accounts[0], value: buy_eth_value });
+      kyberExchangeAddress,
+      tokenAddress,
+      kyberMinConversionRate,
+      uniSwapExchangeAddress,
+      ethToSell,
+      maxTokensSell,
+      sellDeadline,
+      ethToBuy,
+      { from: accounts[0], value: valueEthSent });
 
     const tx = await web3.eth.getTransaction(txHash.tx);
 
@@ -127,8 +135,9 @@ contract("KyberUniArbContract", accounts => {
       return true;
         //return ev.player === bettingAccount && !ev.betNumber.eq(ev.winningNumber);
     });
-  });
 
+  });
+*/
   it("...should have owner as deployer.", async () => {
     const contractOwner = await KyberUniArbContractInstance.owner.call();
     assert.equal(contractOwner, accounts[0], "Deployer should be owner.");

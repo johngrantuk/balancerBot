@@ -1,3 +1,6 @@
+// These scripts manually check Arb contract with Kyber <-> UniSwap functions.
+// Set ISLIVE variable to either connect to Rinkeby or Mainnet.
+// Useful Kyber info:
 // https://developer.kyber.network/docs/Integrations-Web3Guide/
 // https://medium.com/quiknode/building-with-kyber-network-be596863772d
 const fs = require('fs');

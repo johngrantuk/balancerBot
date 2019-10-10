@@ -4,7 +4,7 @@ const UniswapExchange = artifacts.require("./UniswapExchange.sol");
 const ERC20Token =  artifacts.require("./ERC20Token.sol");
 
 contract("RinkebyArbContract", accounts => {
-
+  // The RinkebyArbContract was an initial experimental contract to test various functions. Keeping for reference. See kyberUni for main.
   it("...should have 0 initial balance.", async () => {
     console.log(accounts[0])
     const UniSwapExchangeInstance = await UniswapExchange.deployed();
