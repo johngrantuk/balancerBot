@@ -4,8 +4,8 @@ var ERC20Token = artifacts.require("./ERC20Token.sol");
 var UniswapExchange = artifacts.require("./UniswapExchange.sol");
 
 module.exports = function(deployer) {
-  deployer.deploy(RinkebyArbContract);
+  // deployer.deploy(RinkebyArbContract);
   deployer.deploy(KyberUniArbContract);
-  deployer.deploy(ERC20Token);
-  deployer.deploy(UniswapExchange);
+  //deployer.deploy(ERC20Token);
+  //deployer.deploy(UniswapExchange);
 };

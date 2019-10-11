@@ -1,7 +1,7 @@
 pragma solidity ^0.5.0;
 
 import "./UniswapExchange.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./ERC20Token.sol";
 import "./KyberNetworkProxy.sol";
 
 contract KyberUniArbContract {
@@ -27,7 +27,7 @@ contract KyberUniArbContract {
    */
   function approveToken(address tokenAddress, address exchangeAddress, uint amount) public {
     require(msg.sender == owner, "Only Owner Can Approve");
-    ERC20 token = ERC20(tokenAddress);
+    ERC20Token token = ERC20Token(tokenAddress);
     token.approve(exchangeAddress, amount);
   }
 
@@ -58,7 +58,7 @@ contract KyberUniArbContract {
     // check approval
 
     KyberNetworkProxy kyberExchange = KyberNetworkProxy(kyberExchangeAddress);
-    ERC20 token = ERC20(tokenAddress);
+    ERC20Token token = ERC20Token(tokenAddress);
 
     // Swaps Eth for Token via Kyber Exchange
     uint256 token_bought = kyberExchange.swapEtherToToken.value(ethToSell)(token, kyberMinConversionRate);
