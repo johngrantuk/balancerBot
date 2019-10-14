@@ -6996,7 +6996,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.16",
-  "updatedAt": "2019-10-11T22:36:11.430Z",
+  "updatedAt": "2019-10-14T07:52:48.880Z",
   "devdoc": {
     "methods": {
       "approveToken(address,address,uint256)": {

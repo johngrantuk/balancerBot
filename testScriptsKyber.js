@@ -17,7 +17,7 @@ require('dotenv').config();
 // Set true for Mainnet, false for Rinkeby
 var ISMAINNET = false;
 // Set true for transactions to be sent to network.
-var ISLIVE = true;
+var ISLIVE = false;
 
 // User trade account
 const SOURCE_ACCOUNT = '0xeE398666cA860DFb7390b5D73EE927e9Fb41a60A';

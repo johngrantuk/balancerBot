@@ -4202,68 +4202,9 @@
     "name": "solc",
     "version": "0.5.8+commit.23d335f2.Emscripten.clang"
   },
-  "networks": {
-    "4": {
-      "events": {
-        "0xef501080e89b7bbe29cfb8e1eb48a349f22c4777a3c85d770104c8a80f45b68d": {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "name": "trader",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "name": "tokens",
-              "type": "uint256"
-            },
-            {
-              "indexed": false,
-              "name": "token_bought",
-              "type": "uint256"
-            }
-          ],
-          "name": "ethToToken",
-          "type": "event",
-          "signature": "0xef501080e89b7bbe29cfb8e1eb48a349f22c4777a3c85d770104c8a80f45b68d"
-        },
-        "0xe9c245f1c1a4a7a621218231e7ed679594b1c02c80e4fe05a465ecb46dc37f47": {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "name": "trader",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "name": "ethToBuy",
-              "type": "uint256"
-            },
-            {
-              "indexed": false,
-              "name": "maxTokensSell",
-              "type": "uint256"
-            },
-            {
-              "indexed": false,
-              "name": "tokens_sold",
-              "type": "uint256"
-            }
-          ],
-          "name": "tokenToEth",
-          "type": "event",
-          "signature": "0xe9c245f1c1a4a7a621218231e7ed679594b1c02c80e4fe05a465ecb46dc37f47"
-        }
-      },
-      "links": {},
-      "address": "0xA5c8F2d64942cB11317C18A184146D5a9BE37262",
-      "transactionHash": "0x8b029471d82249f21ac33030a2ef12cd2142f659d1596e327fb70ed77ea12ed7"
-    }
-  },
+  "networks": {},
   "schemaVersion": "3.0.16",
-  "updatedAt": "2019-10-11T22:37:17.481Z",
+  "updatedAt": "2019-10-14T07:52:48.884Z",
   "devdoc": {
     "methods": {
       "approveToken(address,address,uint256)": {
