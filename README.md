@@ -2,6 +2,7 @@
 
 A bot that does arbitrage between Uniswap and other exchanges. The idea is to do all the intelligence (decision of when to trade and what trade) off chain with some simple information about the state of prices, etc called from on chain via Infura. A proxy contract atomizes two transactions in one (so that they either both execute or none do).
 
+
 Decided to develop using Truffle as it's easy to write, test and deploy contracts, etc.
 
 ## Kyber/UniSwap Implementation
